@@ -3,11 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>生字手寫測驗系統 (GitHub 同步版)</title>
+    <title>生字手寫小老師</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* 全域設定標楷體 */
+        /* 載入開源教育部標準楷體 (全字庫) */
+        @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap'); /* 備用 */
+        
+        /* 定義字體優先順序：優先使用標楷體，Android 則使用線上字體 */
+        .kai-font {
+            font-family: "標楷體", "DFKai-SB", "BiauKai", "Noto Serif TC", serif;
+        }
+
         body {
-            font-family: "標楷體", "DFKai-SB", "BiauKai", "微軟正黑體", sans-serif;
+            font-family: "Noto Sans TC", "微軟正黑體", sans-serif;
             background-color: #eef2f7;
             display: flex;
             flex-direction: column;
@@ -17,11 +25,11 @@
             color: #2c3e50;
         }
 
-        h1 { margin-bottom: 15px; font-size: 28px; }
+        h1 { margin-bottom: 15px; font-size: 24px; }
 
         #quiz-container {
             background: white;
-            padding: 25px;
+            padding: 20px;
             border-radius: 20px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             text-align: center;
@@ -29,7 +37,6 @@
             width: 100%;
         }
 
-        /* 載入中狀態 */
         #loading-msg { font-size: 20px; color: #7f8c8d; margin-top: 50px; }
 
         .question-box {
@@ -40,8 +47,8 @@
         }
 
         .info-row {
-            font-size: 26px;
-            margin: 10px 0;
+            font-size: 24px;
+            margin: 8px 0;
             font-family: "標楷體", "DFKai-SB", "BiauKai", serif;
         }
 
@@ -49,26 +56,26 @@
             font-weight: bold;
             color: #7f8c8d;
             margin-right: 8px;
-            font-family: "微軟正黑體", sans-serif;
-            font-size: 20px;
+            font-family: sans-serif;
+            font-size: 18px;
         }
 
         .zhuyin-text {
             color: #e74c3c;
-            font-size: 32px;
-            letter-spacing: 3px;
+            font-size: 28px;
+            letter-spacing: 2px;
         }
 
         .word-hint {
-            font-size: 38px;
+            font-size: 34px;
             font-weight: bold;
         }
 
         .canvas-container {
             position: relative;
-            width: 300px;
-            height: 300px;
-            margin: 15px auto;
+            width: 280px;
+            height: 280px;
+            margin: 10px auto;
             border: 4px solid #2c3e50;
             border-radius: 8px;
             background-color: #fff;
@@ -91,28 +98,25 @@
             margin-top: 15px;
             display: flex;
             justify-content: center;
-            gap: 12px;
+            gap: 10px;
         }
 
         button {
-            padding: 12px 20px;
-            font-size: 18px;
+            padding: 10px 18px;
+            font-size: 16px;
             border: none;
             border-radius: 10px;
             cursor: pointer;
             color: white;
             font-weight: bold;
-            font-family: "微軟正黑體", sans-serif;
-            transition: transform 0.1s;
         }
-        button:active { transform: scale(0.95); }
-
         #btn-clear { background-color: #e67e22; }
-        #btn-check { background-color: #27ae60; width: 140px; }
-        #btn-next { background-color: #3498db; display: none; width: 140px; }
+        #btn-check { background-color: #27ae60; }
+        #btn-next { background-color: #3498db; display: none; }
 
+        /* 解答區樣式調整 */
         #answer-area {
-            margin-top: 20px;
+            margin-top: 15px;
             display: none;
             padding: 15px;
             background-color: #fff9db;
@@ -122,40 +126,54 @@
         }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        #lesson-display {
-            font-size: 18px;
-            color: #16a085;
-            margin-bottom: 8px;
-            display: block;
-            font-family: "微軟正黑體", sans-serif;
+        .answer-flex {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
         }
 
         .correct-char {
             font-family: "標楷體", "DFKai-SB", "BiauKai", serif;
-            font-size: 110px;
+            font-size: 90px;
             font-weight: bold;
             color: #c0392b;
             line-height: 1;
-            margin: 5px 0;
         }
 
-        #progress { margin-top: 20px; font-size: 16px; color: #7f8c8d; font-family: sans-serif; }
+        .char-details {
+            text-align: left;
+            font-size: 22px;
+            color: #2c3e50;
+            font-family: "標楷體", "DFKai-SB", "BiauKai", serif;
+        }
+
+        #lesson-display {
+            font-size: 16px;
+            color: #16a085;
+            margin-bottom: 10px;
+            display: block;
+            font-family: sans-serif;
+            font-weight: bold;
+        }
+
+        #progress { margin-top: 20px; font-size: 14px; color: #7f8c8d; }
     </style>
 </head>
 <body>
 
     <h1>✏️ 生字手寫小老師</h1>
 
-    <div id="loading-msg">正在載入最新生字表，請稍候...</div>
+    <div id="loading-msg">載入中...</div>
 
     <div id="quiz-container" style="display:none;">
         <div class="question-box">
             <div class="info-row"><span class="label">注音：</span><span id="zhuyin-display" class="zhuyin-text"></span></div>
-            <div class="info-row"><span class="label">詞語：</span><span id="word-display" class="word-hint"></span></div>
+            <div class="info-row"><span class="label">詞語：</span><span id="word-display" class="word-hint kai-font"></span></div>
         </div>
 
         <div class="canvas-container">
-            <canvas id="draw-pad" width="300" height="300"></canvas>
+            <canvas id="draw-pad" width="280" height="280"></canvas>
         </div>
 
         <div class="controls">
@@ -166,58 +184,51 @@
 
         <div id="answer-area">
             <span id="lesson-display"></span>
-            正確生字：
-            <div class="correct-char" id="correct-char"></div>
+            <div class="answer-flex">
+                <div class="correct-char" id="correct-char"></div>
+                <div class="char-details">
+                    <div>部首：<span id="radical-display"></span></div>
+                    <div>筆畫：<span id="strokes-display"></span></div>
+                </div>
+            </div>
         </div>
         
         <div id="progress"></div>
     </div>
 
     <script>
-        // --- 設定區 ---
-        // 如果 CSV 檔案與 index.html 放在同一個資料夾，直接寫檔名即可
         const csvUrl = 'data.csv'; 
-
         let vocabList = [];
         let currentIndex = 0;
         let randomizedList = [];
 
-        // --- 核心功能：讀取 GitHub 上的 CSV ---
         async function fetchVocabData() {
             try {
                 const response = await fetch(csvUrl);
-                if (!response.ok) throw new Error('無法讀取 CSV 檔案');
-                
                 const data = await response.text();
                 parseCSV(data);
-                
-                // 隱藏載入訊息，顯示測驗區
                 document.getElementById('loading-msg').style.display = 'none';
                 document.getElementById('quiz-container').style.display = 'block';
-                
                 startQuiz();
             } catch (error) {
-                console.error(error);
-                document.getElementById('loading-msg').innerText = '載入失敗，請確認資料夾中是否有 data.csv 檔案。';
+                document.getElementById('loading-msg').innerText = '載入 CSV 失敗。';
             }
         }
 
         function parseCSV(text) {
             const lines = text.split(/\r?\n/);
             vocabList = [];
-            
-            // 從第一行標題列之後開始讀
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
-                
-                // 處理 CSV 逗點分隔（簡單處理）
                 const cols = line.split(',');
                 if (cols.length >= 6) {
                     vocabList.push({
                         lesson: cols[0],
                         char: cols[1],
                         zhuyin: cols[2],
+                        radical: cols[3], // 部首
+                        strokes: cols[4], // 筆畫
                         word: cols[5]
                     });
                 }
@@ -233,9 +244,14 @@
             const item = randomizedList[currentIndex];
             document.getElementById('zhuyin-display').innerText = item.zhuyin;
             document.getElementById('word-display').innerText = item.word.replace(item.char, '〇');
+            
+            // 解答內容
             document.getElementById('correct-char').innerText = item.char;
+            document.getElementById('radical-display').innerText = item.radical;
+            document.getElementById('strokes-display').innerText = item.strokes;
             document.getElementById('lesson-display').innerText = `【${item.lesson}】`;
-            document.getElementById('progress').innerText = `目前進度：${currentIndex + 1} / ${randomizedList.length}`;
+            
+            document.getElementById('progress').innerText = `進度：${currentIndex + 1} / ${randomizedList.length}`;
             
             clearCanvas();
             document.getElementById('answer-area').style.display = 'none';
@@ -243,12 +259,10 @@
             document.getElementById('btn-next').style.display = 'none';
         }
 
-        // --- 按鈕事件 ---
         document.getElementById('btn-check').addEventListener('click', () => {
             document.getElementById('answer-area').style.display = 'block';
             document.getElementById('btn-check').style.display = 'none';
             document.getElementById('btn-next').style.display = 'inline-block';
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         });
 
         document.getElementById('btn-next').addEventListener('click', () => {
@@ -256,18 +270,17 @@
             if (currentIndex < randomizedList.length) {
                 loadQuestion();
             } else {
-                alert("太棒了！所有生字都練習完囉！將重新開始隨機出題。");
+                alert("太棒了！練習完畢。");
                 currentIndex = 0;
                 randomizedList.sort(() => Math.random() - 0.5);
                 loadQuestion();
             }
         });
 
-        // --- 手寫畫布功能 (與之前相同) ---
         const canvas = document.getElementById('draw-pad');
         const ctx = canvas.getContext('2d');
         let isDrawing = false;
-        ctx.lineWidth = 12;
+        ctx.lineWidth = 10;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.strokeStyle = '#2c3e50';
@@ -280,12 +293,10 @@
             const rect = canvas.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            const x = clientX - rect.left;
-            const y = clientY - rect.top;
-            ctx.lineTo(x, y);
+            ctx.lineTo(clientX - rect.left, clientY - rect.top);
             ctx.stroke();
             ctx.beginPath();
-            ctx.moveTo(x, y);
+            ctx.moveTo(clientX - rect.left, clientY - rect.top);
         }
         function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath(); }
 
@@ -293,14 +304,11 @@
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseout', stopDrawing);
         canvas.addEventListener('touchstart', startDrawing, {passive: false});
         canvas.addEventListener('touchmove', draw, {passive: false});
         canvas.addEventListener('touchend', stopDrawing);
 
-        // 啟動資料抓取
         fetchVocabData();
-
     </script>
 </body>
 </html>
