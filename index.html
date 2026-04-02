@@ -4,16 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>生字手寫小老師</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC&display=swap" rel="stylesheet">
     <style>
-        /* 定義楷體優先順序，並在 Android 上強制使用 Noto Serif TC */
+        /* 跨平台楷體優先順序 */
         .kai-text {
-            font-family: "標楷體", "DFKai-SB", "BiauKai", "Noto Serif TC", serif;
-            font-weight: 700;
+            font-family: 
+                "Kaiti TC",           /* macOS / iOS 內建繁體楷體 */
+                "BiauKai",            /* macOS 舊版標楷體 */
+                "標楷體", "DFKai-SB", /* Windows 內建標楷體 */
+                "LXGW WenKai TC",     /* 雲端字型，給 Android 或缺字型的系統打底 */
+                serif;
+            
+            /* 注意：正統楷體通常沒有粗體(Bold)字重，強制加粗可能會讓筆畫糊掉，建議改為 normal，若你覺得視覺上需要仍可改回 700 */
+            font-weight: normal; 
         }
 
         body {
-            font-family: "微軟正黑體", sans-serif;
+            font-family: "微軟正黑體", "PingFang TC", "Helvetica Neue", sans-serif; /* 補上 Apple 系統的預設黑體 */
             background-color: #eef2f7;
             display: flex;
             flex-direction: column;
@@ -51,7 +58,7 @@
             font-weight: bold;
             color: #7f8c8d;
             margin-right: 8px;
-            font-family: sans-serif;
+            font-family: "微軟正黑體", "PingFang TC", sans-serif; /* 讓標籤維持黑體，提高閱讀性 */
             font-size: 18px;
         }
 
