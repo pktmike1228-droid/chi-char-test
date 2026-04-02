@@ -3,30 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>生字手寫小老師</title>
+    <title>✏️ 生字手寫小老師</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&display=swap" rel="stylesheet">
     
     <style>
-        /* 定義教育部標準楷體風格的 Web Font */
+        /* 核心解決方案：引入教育部標準楷體風格的 Web Font，解決行動裝置 (Android/iOS) 缺字問題 */
         @font-face {
             font-family: 'StandardKai';
-            /* 這是一個由開源社群維護的教育部標準楷體 Web Font 來源 (常用於台灣開發者) */
-            /* 如果這個 URL 失效，建議將教育部標準楷體 .ttf 檔進行字體抽稀 (Subset) 後自行託管 */
+            /* 採用 WOFF2 壓縮格式，適合行動網路下載 */
             src: url('https://cdn.jsdelivr.net/gh/naen-kon/Font-Standard-Kai/Standard-Kai.woff2') format('woff2');
             font-weight: normal;
             font-style: normal;
             font-display: swap;
         }
 
+        /* 定義跨平台楷體優先順序 */
         .kai-text {
-            /* 優先順序：Windows 標楷體 -> Mac/iOS 楷體 -> 教育部風格 WebFont -> 系統預設 Serif */
             font-family: 
-                "標楷體", "DFKai-SB", 
-                "Kaiti TC", "BiauKai", 
-                "StandardKai", 
-                "Apple LiSung", "Noto Serif TC", serif;
-            font-weight: 700; /* 生字教學通常需要粗一點點 */
+                "標楷體", "DFKai-SB", /* Windows 優先，速度最快 */
+                "StandardKai",       /* Android 與 iOS 的救星 (Web Font) */
+                "BiauKai", "Kaiti TC", /* macOS 備選 */
+                "Noto Serif TC", serif;
+            font-weight: 700;
         }
 
         body {
@@ -40,13 +39,8 @@
             color: #2c3e50;
         }
 
-        /* 確保注音與生字字體一致 */
-        .zhuyin-text, .word-hint, .correct-char {
-            font-family: "StandardKai", "標楷體", "DFKai-SB", "Kaiti TC", serif;
-        }
-
-        /* 以下維持你原本的 CSS 設定... */
         h1 { margin-bottom: 15px; font-size: 24px; }
+
         #quiz-container {
             background: white;
             padding: 20px;
@@ -56,22 +50,52 @@
             max-width: 450px;
             width: 100%;
         }
+
         .question-box {
             margin-bottom: 15px;
             text-align: left;
             padding: 0 15px;
             border-left: 5px solid #3498db;
         }
-        .info-row { font-size: 24px; margin: 8px 0; }
-        .label { font-weight: bold; color: #7f8c8d; margin-right: 8px; font-size: 18px; font-family: sans-serif; }
-        .zhuyin-text { color: #e74c3c; font-size: 28px; letter-spacing: 2px; }
-        .word-hint { font-size: 34px; }
-        .canvas-container {
-            position: relative; width: 280px; height: 280px; margin: 10px auto;
-            border: 4px solid #2c3e50; border-radius: 8px; background-color: #fff;
+
+        .info-row {
+            font-size: 24px;
+            margin: 8px 0;
         }
+
+        .label {
+            font-weight: bold;
+            color: #7f8c8d;
+            margin-right: 8px;
+            font-family: sans-serif;
+            font-size: 18px;
+        }
+
+        .zhuyin-text {
+            color: #e74c3c;
+            font-size: 28px;
+            letter-spacing: 2px;
+        }
+
+        .word-hint {
+            font-size: 34px;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 10px auto;
+            border: 4px solid #2c3e50;
+            border-radius: 8px;
+            background-color: #fff;
+        }
+        
+        /* 九宮格/米字格背景 */
         .canvas-container::before {
-            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
             background-image: 
                 linear-gradient(to bottom, transparent 49.5%, #ffd1d1 49.5%, #ffd1d1 50.5%, transparent 50.5%),
                 linear-gradient(to right, transparent 49.5%, #ffd1d1 49.5%, #ffd1d1 50.5%, transparent 50.5%),
@@ -79,17 +103,65 @@
                 linear-gradient(-45deg, transparent 49.7%, #f0f0f0 49.7%, #f0f0f0 50.3%, transparent 50.3%);
             pointer-events: none;
         }
+
         canvas { position: relative; z-index: 10; cursor: crosshair; touch-action: none; }
-        .controls { margin-top: 15px; display: flex; justify-content: center; gap: 10px; }
-        button { padding: 10px 18px; font-size: 16px; border: none; border-radius: 10px; cursor: pointer; color: white; font-weight: bold; }
+
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 18px;
+            font-size: 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+        }
         #btn-clear { background-color: #e67e22; }
         #btn-check { background-color: #27ae60; }
         #btn-next { background-color: #3498db; display: none; }
-        #answer-area { margin-top: 15px; display: none; padding: 15px; background-color: #fff9db; border: 2px dashed #f1c40f; border-radius: 12px; }
-        .answer-flex { display: flex; align-items: center; justify-content: center; gap: 20px; }
-        .correct-char { font-size: 100px; color: #c0392b; line-height: 1; }
-        .char-details { text-align: left; font-size: 22px; color: #2c3e50; }
-        #lesson-display { font-size: 16px; color: #16a085; margin-bottom: 10px; display: block; font-weight: bold; }
+
+        #answer-area {
+            margin-top: 15px;
+            display: none;
+            padding: 15px;
+            background-color: #fff9db;
+            border: 2px dashed #f1c40f;
+            border-radius: 12px;
+        }
+
+        .answer-flex {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .correct-char {
+            font-size: 100px;
+            color: #c0392b;
+            line-height: 1;
+        }
+
+        .char-details {
+            text-align: left;
+            font-size: 22px;
+            color: #2c3e50;
+        }
+
+        #lesson-display {
+            font-size: 16px;
+            color: #16a085;
+            margin-bottom: 10px;
+            display: block;
+            font-weight: bold;
+        }
+
         #progress { margin-top: 20px; font-size: 14px; color: #7f8c8d; }
     </style>
 </head>
@@ -140,7 +212,7 @@
                 parseCSV(data);
                 startQuiz();
             } catch (error) {
-                alert('載入資料失敗，請確認 data.csv 是否存在。');
+                alert('載入資料失敗，請確認 data.csv 是否存在於相同目錄下。');
             }
         }
 
@@ -165,6 +237,7 @@
         }
 
         function startQuiz() {
+            if (vocabList.length === 0) return;
             randomizedList = [...vocabList].sort(() => Math.random() - 0.5);
             loadQuestion();
         }
@@ -172,12 +245,14 @@
         function loadQuestion() {
             const item = randomizedList[currentIndex];
             document.getElementById('zhuyin-display').innerText = item.zhuyin;
+            // 將詞語中的目標生字替換為空圈圈
             document.getElementById('word-display').innerText = item.word.replace(item.char, '〇');
             document.getElementById('correct-char').innerText = item.char;
             document.getElementById('radical-display').innerText = item.radical;
             document.getElementById('strokes-display').innerText = item.strokes;
             document.getElementById('lesson-display').innerText = `【${item.lesson}】`;
             document.getElementById('progress').innerText = `進度：${currentIndex + 1} / ${randomizedList.length}`;
+            
             clearCanvas();
             document.getElementById('answer-area').style.display = 'none';
             document.getElementById('btn-check').style.display = 'inline-block';
@@ -195,16 +270,18 @@
             if (currentIndex < randomizedList.length) {
                 loadQuestion();
             } else {
-                alert("練習完畢！");
+                alert("練習完畢！即將重新開始隨機出題。");
                 currentIndex = 0;
                 randomizedList.sort(() => Math.random() - 0.5);
                 loadQuestion();
             }
-        } );
+        });
 
+        // 畫布功能
         const canvas = document.getElementById('draw-pad');
         const ctx = canvas.getContext('2d');
         let isDrawing = false;
+        
         ctx.lineWidth = 10;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -212,18 +289,24 @@
 
         function startDrawing(e) { isDrawing = true; draw(e); }
         function stopDrawing() { isDrawing = false; ctx.beginPath(); }
+        
         function draw(e) {
             if (!isDrawing) return;
             e.preventDefault();
             const rect = canvas.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
             ctx.lineTo(clientX - rect.left, clientY - rect.top);
             ctx.stroke();
             ctx.beginPath();
             ctx.moveTo(clientX - rect.left, clientY - rect.top);
         }
-        function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath(); }
+        
+        function clearCanvas() { 
+            ctx.clearRect(0, 0, canvas.width, canvas.height); 
+            ctx.beginPath(); 
+        }
 
         document.getElementById('btn-clear').addEventListener('click', clearCanvas);
         canvas.addEventListener('mousedown', startDrawing);
@@ -233,6 +316,7 @@
         canvas.addEventListener('touchmove', draw, {passive: false});
         canvas.addEventListener('touchend', stopDrawing);
 
+        // 啟動資料抓取
         fetchVocabData();
     </script>
 </body>
