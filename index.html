@@ -4,18 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>生字手寫小老師</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&display=swap" rel="stylesheet">
     <style>
-        /* 載入開源教育部標準楷體 (全字庫) */
-        @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap'); /* 備用 */
-        
-        /* 定義字體優先順序：優先使用標楷體，Android 則使用線上字體 */
-        .kai-font {
+        /* 定義楷體優先順序，並在 Android 上強制使用 Noto Serif TC */
+        .kai-text {
             font-family: "標楷體", "DFKai-SB", "BiauKai", "Noto Serif TC", serif;
+            font-weight: 700;
         }
 
         body {
-            font-family: "Noto Sans TC", "微軟正黑體", sans-serif;
+            font-family: "微軟正黑體", sans-serif;
             background-color: #eef2f7;
             display: flex;
             flex-direction: column;
@@ -37,8 +35,6 @@
             width: 100%;
         }
 
-        #loading-msg { font-size: 20px; color: #7f8c8d; margin-top: 50px; }
-
         .question-box {
             margin-bottom: 15px;
             text-align: left;
@@ -49,7 +45,6 @@
         .info-row {
             font-size: 24px;
             margin: 8px 0;
-            font-family: "標楷體", "DFKai-SB", "BiauKai", serif;
         }
 
         .label {
@@ -66,9 +61,9 @@
             letter-spacing: 2px;
         }
 
+        /* 詞語顯示區 */
         .word-hint {
             font-size: 34px;
-            font-weight: bold;
         }
 
         .canvas-container {
@@ -114,7 +109,6 @@
         #btn-check { background-color: #27ae60; }
         #btn-next { background-color: #3498db; display: none; }
 
-        /* 解答區樣式調整 */
         #answer-area {
             margin-top: 15px;
             display: none;
@@ -122,9 +116,7 @@
             background-color: #fff9db;
             border: 2px dashed #f1c40f;
             border-radius: 12px;
-            animation: fadeIn 0.5s;
         }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         .answer-flex {
             display: flex;
@@ -133,10 +125,9 @@
             gap: 20px;
         }
 
+        /* 正確答案特大字 */
         .correct-char {
-            font-family: "標楷體", "DFKai-SB", "BiauKai", serif;
-            font-size: 90px;
-            font-weight: bold;
+            font-size: 100px;
             color: #c0392b;
             line-height: 1;
         }
@@ -145,7 +136,6 @@
             text-align: left;
             font-size: 22px;
             color: #2c3e50;
-            font-family: "標楷體", "DFKai-SB", "BiauKai", serif;
         }
 
         #lesson-display {
@@ -153,7 +143,6 @@
             color: #16a085;
             margin-bottom: 10px;
             display: block;
-            font-family: sans-serif;
             font-weight: bold;
         }
 
@@ -164,12 +153,10 @@
 
     <h1>✏️ 生字手寫小老師</h1>
 
-    <div id="loading-msg">載入中...</div>
-
-    <div id="quiz-container" style="display:none;">
+    <div id="quiz-container">
         <div class="question-box">
-            <div class="info-row"><span class="label">注音：</span><span id="zhuyin-display" class="zhuyin-text"></span></div>
-            <div class="info-row"><span class="label">詞語：</span><span id="word-display" class="word-hint kai-font"></span></div>
+            <div class="info-row kai-text"><span class="label">注音：</span><span id="zhuyin-display" class="zhuyin-text"></span></div>
+            <div class="info-row kai-text"><span class="label">詞語：</span><span id="word-display" class="word-hint"></span></div>
         </div>
 
         <div class="canvas-container">
@@ -185,8 +172,8 @@
         <div id="answer-area">
             <span id="lesson-display"></span>
             <div class="answer-flex">
-                <div class="correct-char" id="correct-char"></div>
-                <div class="char-details">
+                <div class="correct-char kai-text" id="correct-char"></div>
+                <div class="char-details kai-text">
                     <div>部首：<span id="radical-display"></span></div>
                     <div>筆畫：<span id="strokes-display"></span></div>
                 </div>
@@ -207,11 +194,9 @@
                 const response = await fetch(csvUrl);
                 const data = await response.text();
                 parseCSV(data);
-                document.getElementById('loading-msg').style.display = 'none';
-                document.getElementById('quiz-container').style.display = 'block';
                 startQuiz();
             } catch (error) {
-                document.getElementById('loading-msg').innerText = '載入 CSV 失敗。';
+                alert('載入資料失敗，請確認 data.csv 是否存在。');
             }
         }
 
@@ -227,8 +212,8 @@
                         lesson: cols[0],
                         char: cols[1],
                         zhuyin: cols[2],
-                        radical: cols[3], // 部首
-                        strokes: cols[4], // 筆畫
+                        radical: cols[3],
+                        strokes: cols[4],
                         word: cols[5]
                     });
                 }
@@ -244,15 +229,11 @@
             const item = randomizedList[currentIndex];
             document.getElementById('zhuyin-display').innerText = item.zhuyin;
             document.getElementById('word-display').innerText = item.word.replace(item.char, '〇');
-            
-            // 解答內容
             document.getElementById('correct-char').innerText = item.char;
             document.getElementById('radical-display').innerText = item.radical;
             document.getElementById('strokes-display').innerText = item.strokes;
             document.getElementById('lesson-display').innerText = `【${item.lesson}】`;
-            
             document.getElementById('progress').innerText = `進度：${currentIndex + 1} / ${randomizedList.length}`;
-            
             clearCanvas();
             document.getElementById('answer-area').style.display = 'none';
             document.getElementById('btn-check').style.display = 'inline-block';
@@ -270,12 +251,12 @@
             if (currentIndex < randomizedList.length) {
                 loadQuestion();
             } else {
-                alert("太棒了！練習完畢。");
+                alert("練習完畢！");
                 currentIndex = 0;
                 randomizedList.sort(() => Math.random() - 0.5);
                 loadQuestion();
             }
-        });
+        } );
 
         const canvas = document.getElementById('draw-pad');
         const ctx = canvas.getContext('2d');
