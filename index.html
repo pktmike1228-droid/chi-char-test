@@ -8,14 +8,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700&display=swap" rel="stylesheet">
     
     <style>
-        /* 嘗試從開源來源載入教育部標準楷體 */
         @font-face {
             font-family: 'StandardKai';
             src: url('https://cdn.jsdelivr.net/gh/naen-kon/Font-Standard-Kai/Standard-Kai.woff2') format('woff2');
             font-display: swap;
         }
 
-        /* 強制套用字體順序 */
         .kai-text, .zhuyin-text, .word-hint, .correct-char, #correct-char {
             font-family: "標楷體", "DFKai-SB", "BiauKai", "Kaiti TC", "StandardKai", "Noto Serif TC", serif !important;
             font-weight: 700 !important;
@@ -36,27 +34,27 @@
             text-align: center; max-width: 450px; width: 100%;
         }
 
-        /* 設定畫面專用 CSS */
+        /* 設定畫面 */
         #setup-container h2 { font-size: 20px; color: #34495e; margin-top: 0; }
         .setup-controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
         .setup-controls button { font-size: 14px; padding: 6px 12px; border-radius: 6px; }
         #btn-select-all { background-color: #f39c12; }
         #btn-deselect-all { background-color: #7f8c8d; }
         
-        #lesson-checkboxes {
+        #scope-checkboxes {
             display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
             max-height: 250px; overflow-y: auto;
             border: 2px solid #ecf0f1; padding: 15px; border-radius: 10px;
             margin-bottom: 15px; background-color: #fafbfc;
         }
         .checkbox-label {
-            font-size: 16px; cursor: pointer; display: flex; align-items: center; gap: 8px;
-            color: #2c3e50; font-weight: bold; text-align: left;
+            font-size: 18px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+            color: #2c3e50; font-weight: bold; width: 100%;
         }
-        .checkbox-label input { width: 18px; height: 18px; cursor: pointer; }
+        .checkbox-label input { width: 22px; height: 22px; cursor: pointer; }
         #btn-start-quiz { background-color: #27ae60; width: 100%; font-size: 18px; padding: 12px; }
 
-        /* 測驗畫面專用 CSS */
+        /* 測驗畫面 */
         #quiz-container { display: none; }
         .question-box { margin-bottom: 15px; text-align: left; padding: 0 15px; border-left: 5px solid #3498db; }
         .info-row { font-size: 24px; margin: 8px 0; }
@@ -84,7 +82,7 @@
         #btn-clear { background-color: #e67e22; }
         #btn-check { background-color: #27ae60; }
         #btn-next { background-color: #3498db; display: none; }
-        #btn-back { background-color: #95a5a6; } /* 返回設定按鈕 */
+        #btn-back { background-color: #95a5a6; }
 
         #answer-area { margin-top: 15px; display: none; padding: 15px; background-color: #fff9db; border: 2px dashed #f1c40f; border-radius: 12px; }
         .answer-flex { display: flex; align-items: center; justify-content: center; gap: 20px; }
@@ -99,12 +97,12 @@
     <h1>✏️ 生字手寫小老師</h1>
 
     <div id="setup-container" class="container-box">
-        <h2>請選擇本次練習範圍</h2>
+        <h2>請勾選考試範圍</h2>
         <div class="setup-controls">
             <button id="btn-select-all">✅ 全部勾選</button>
             <button id="btn-deselect-all">❌ 全部取消</button>
         </div>
-        <div id="lesson-checkboxes">
+        <div id="scope-checkboxes">
             </div>
         <button id="btn-start-quiz">開始練習 🚀</button>
     </div>
@@ -142,9 +140,8 @@
 
     <script>
         const csvUrl = 'data.csv'; 
-        let allVocabList = [];       // 儲存全部資料
-        let activeVocabList = [];    // 儲存目前勾選範圍的資料
-        let availableLessons = [];   // 儲存所有不重複的「考試範圍+課別」
+        let allVocabList = [];       
+        let uniqueScopes = [];       
         let currentIndex = 0;
         let randomizedList = [];
 
@@ -162,24 +159,19 @@
         function parseCSV(text) {
             const lines = text.split(/\r?\n/);
             allVocabList = [];
-            const lessonSet = new Set();
+            const scopeSet = new Set();
 
-            // 新版格式欄位：0:考試範圍, 1:課別, 2:生字, 3:注音, 4:部首, 5:筆畫, 6:詞語
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
-                
-                // 處理可能有雙引號包覆的 CSV（簡單切割）
                 const cols = line.split(',');
                 if (cols.length >= 7) {
                     const scope = cols[0].trim();
-                    const lessonName = cols[1].trim();
-                    const lessonKey = `[${scope}] ${lessonName}`; // 組合成 " [113上 期末] 第一課：拍拍手 "
-                    
-                    lessonSet.add(lessonKey);
+                    scopeSet.add(scope);
 
                     allVocabList.push({
-                        lessonKey: lessonKey,
+                        scope: scope,
+                        lesson: cols[1].trim(),
                         char: cols[2].trim(),
                         zhuyin: cols[3].trim(),
                         radical: cols[4].trim(),
@@ -188,82 +180,72 @@
                     });
                 }
             }
-            availableLessons = Array.from(lessonSet);
+            uniqueScopes = Array.from(scopeSet);
         }
 
-        // 建立勾選單介面
         function buildSetupUI() {
-            const container = document.getElementById('lesson-checkboxes');
-            container.innerHTML = ''; // 清空
+            const container = document.getElementById('scope-checkboxes');
+            container.innerHTML = ''; 
             
-            availableLessons.forEach(lesson => {
+            uniqueScopes.forEach(scope => {
                 const label = document.createElement('label');
                 label.className = 'checkbox-label';
                 
                 const cb = document.createElement('input');
                 cb.type = 'checkbox';
-                cb.value = lesson;
-                cb.checked = true; // 預設全部勾選
+                cb.value = scope;
+                cb.checked = true; 
                 
                 label.appendChild(cb);
-                label.appendChild(document.createTextNode(lesson));
+                label.appendChild(document.createTextNode(scope));
                 container.appendChild(label);
             });
         }
 
-        // 全部勾選與全部取消事件
         document.getElementById('btn-select-all').addEventListener('click', () => {
-            document.querySelectorAll('#lesson-checkboxes input').forEach(cb => cb.checked = true);
+            document.querySelectorAll('#scope-checkboxes input').forEach(cb => cb.checked = true);
         });
 
         document.getElementById('btn-deselect-all').addEventListener('click', () => {
-            document.querySelectorAll('#lesson-checkboxes input').forEach(cb => cb.checked = false);
+            document.querySelectorAll('#scope-checkboxes input').forEach(cb => cb.checked = false);
         });
 
-        // 按下開始練習
         document.getElementById('btn-start-quiz').addEventListener('click', () => {
-            const checkedBoxes = Array.from(document.querySelectorAll('#lesson-checkboxes input:checked'));
-            if (checkedBoxes.length === 0) {
+            const checkedScopes = Array.from(document.querySelectorAll('#scope-checkboxes input:checked')).map(cb => cb.value);
+            
+            if (checkedScopes.length === 0) {
                 alert('請至少勾選一個考試範圍！');
                 return;
             }
 
-            const selectedLessons = checkedBoxes.map(cb => cb.value);
-            activeVocabList = allVocabList.filter(v => selectedLessons.includes(v.lessonKey));
+            // 根據勾選的「考試範圍」篩選題目
+            randomizedList = allVocabList
+                .filter(v => checkedScopes.includes(v.scope))
+                .sort(() => Math.random() - 0.5);
             
             document.getElementById('setup-container').style.display = 'none';
             document.getElementById('quiz-container').style.display = 'block';
             
-            startQuiz();
+            currentIndex = 0;
+            loadQuestion();
         });
 
-        // 返回重選
         document.getElementById('btn-back').addEventListener('click', () => {
             document.getElementById('setup-container').style.display = 'block';
             document.getElementById('quiz-container').style.display = 'none';
-            // 清除畫布和答案區狀態
             clearCanvas();
             document.getElementById('answer-area').style.display = 'none';
         });
 
-        // 測驗邏輯
-        function startQuiz() {
-            if (activeVocabList.length === 0) return;
-            // 打亂陣列順序
-            randomizedList = [...activeVocabList].sort(() => Math.random() - 0.5);
-            currentIndex = 0;
-            loadQuestion();
-        }
-
         function loadQuestion() {
             const item = randomizedList[currentIndex];
             document.getElementById('zhuyin-display').innerText = item.zhuyin;
-            // 將詞語中的目標生字替換為空圈圈
             document.getElementById('word-display').innerText = item.word.replace(item.char, '〇');
             document.getElementById('correct-char').innerText = item.char;
             document.getElementById('radical-display').innerText = item.radical;
             document.getElementById('strokes-display').innerText = item.strokes;
-            document.getElementById('lesson-display').innerText = `${item.lessonKey}`;
+            // 答案區顯示 範圍 + 課別，讓學生知道出處
+            document.getElementById('lesson-display').innerText = `【${item.scope}】${item.lesson}`;
             document.getElementById('progress').innerText = `目前進度：${currentIndex + 1} / ${randomizedList.length}`;
             
             clearCanvas();
@@ -283,18 +265,16 @@
             if (currentIndex < randomizedList.length) {
                 loadQuestion();
             } else {
-                alert("太棒了！勾選的範圍已經全部練習完畢！");
+                alert("練習完畢！");
                 currentIndex = 0;
                 randomizedList.sort(() => Math.random() - 0.5);
-                loadQuestion(); // 重新開始這批生字
+                loadQuestion();
             }
         });
 
-        // 畫布功能
         const canvas = document.getElementById('draw-pad');
         const ctx = canvas.getContext('2d');
         let isDrawing = false;
-        
         ctx.lineWidth = 10;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -302,24 +282,18 @@
 
         function startDrawing(e) { isDrawing = true; draw(e); }
         function stopDrawing() { isDrawing = false; ctx.beginPath(); }
-        
         function draw(e) {
             if (!isDrawing) return;
             e.preventDefault();
             const rect = canvas.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            
             ctx.lineTo(clientX - rect.left, clientY - rect.top);
             ctx.stroke();
             ctx.beginPath();
             ctx.moveTo(clientX - rect.left, clientY - rect.top);
         }
-        
-        function clearCanvas() { 
-            ctx.clearRect(0, 0, canvas.width, canvas.height); 
-            ctx.beginPath(); 
-        }
+        function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath(); }
 
         document.getElementById('btn-clear').addEventListener('click', clearCanvas);
         canvas.addEventListener('mousedown', startDrawing);
@@ -329,7 +303,6 @@
         canvas.addEventListener('touchmove', draw, {passive: false});
         canvas.addEventListener('touchend', stopDrawing);
 
-        // 網頁載入時啟動資料抓取
         fetchVocabData();
     </script>
 </body>
