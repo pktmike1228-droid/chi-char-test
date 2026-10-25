@@ -6,10 +6,20 @@
     <title>✏️ 生字手寫小老師</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700&family=LXGW+WenKai+TC:wght@700&display=swap" rel="stylesheet">
+    <!-- 全字庫正楷體（教育部標準楷書）子集，由 tools/build_font_subset.py 產生 -->
+    <link rel="preload" href="fonts/tw-kai-subset.woff2" as="font" type="font/woff2" crossorigin>
 
     <style>
+        /* 全字庫正楷體：國家發展委員會提供，政府資料開放授權條款第 1 版／OFL 1.1 */
+        @font-face {
+            font-family: "TW-Kai Web";
+            src: url("fonts/tw-kai-subset.woff2") format("woff2");
+            font-weight: 400;
+            font-display: swap;
+        }
+
         .kai-text, .zhuyin-text, .word-hint, .correct-char, #correct-char {
-            font-family: "標楷體", "DFKai-SB", "BiauKai", "Kaiti TC", "LXGW WenKai TC", "Noto Serif TC", serif !important;
+            font-family: "TW-Kai Web", "標楷體", "DFKai-SB", "BiauKai", "Kaiti TC", "LXGW WenKai TC", "Noto Serif TC", serif !important;
             font-weight: 700 !important;
         }
 
