@@ -94,6 +94,17 @@
         .char-details { text-align: left; font-size: 22px; color: #2c3e50; }
         #lesson-display { font-size: 16px; color: #16a085; margin-bottom: 10px; display: block; font-weight: bold; }
         #progress { margin-top: 20px; font-size: 14px; color: #7f8c8d; }
+
+        /* 繼續上次練習 */
+        #resume-box {
+            display: none; margin-bottom: 15px; padding: 15px; border-radius: 12px;
+            background-color: #eafaf1; border: 2px solid #27ae60; text-align: left;
+        }
+        #resume-box p { margin: 0 0 6px; font-size: 18px; font-weight: bold; color: #1e8449; }
+        #resume-scopes { font-size: 14px; color: #555; margin-bottom: 12px; }
+        .resume-buttons { display: flex; gap: 10px; }
+        #btn-resume { background-color: #27ae60; flex: 2; font-size: 18px; }
+        #btn-discard { background-color: #95a5a6; flex: 1; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -101,6 +112,14 @@
     <h1>✏️ 生字手寫小老師</h1>
 
     <div id="setup-container" class="container-box">
+        <div id="resume-box">
+            <p id="resume-text"></p>
+            <div id="resume-scopes"></div>
+            <div class="resume-buttons">
+                <button id="btn-resume">▶ 繼續上次練習</button>
+                <button id="btn-discard">重新開始</button>
+            </div>
+        </div>
         <h2>請勾選考試範圍</h2>
         <div class="setup-controls">
             <button id="btn-select-all">✅ 全部勾選</button>
@@ -148,6 +167,67 @@
         let uniqueScopes = [];       
         let currentIndex = 0;
         let randomizedList = [];
+        let checkedScopesNow = [];
+        let answerShown = false;
+
+        // ===== 進度存檔（存在這台裝置的瀏覽器裡） =====
+        const PROGRESS_KEY = 'chiCharTest.progress.v1';
+        const SCOPES_KEY = 'chiCharTest.scopes.v1';
+        const CANVAS_KEY = 'chiCharTest.canvas.v1';
+
+        function storageGet(key) {
+            try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
+        }
+        function storageSet(key, value) {
+            try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* 無痕模式等情況存不了，就略過 */ }
+        }
+        function storageRemove(key) {
+            try { localStorage.removeItem(key); } catch (e) {}
+        }
+
+        // 每個生字的識別碼：範圍＋課別＋字（data.csv 調整注音、筆畫也不受影響）
+        function itemKey(v) { return `${v.scope}|${v.lesson}|${v.char}`; }
+
+        function saveProgress() {
+            storageSet(PROGRESS_KEY, {
+                scopes: checkedScopesNow,
+                order: randomizedList.map(itemKey),
+                index: currentIndex,
+                answerShown: answerShown,
+                savedAt: Date.now()
+            });
+        }
+
+        function clearProgress() {
+            storageRemove(PROGRESS_KEY);
+            storageRemove(CANVAS_KEY);
+        }
+
+        // 讀回存檔，並對照目前的 data.csv；被刪掉的字自動略過
+        function loadSavedProgress() {
+            const saved = storageGet(PROGRESS_KEY);
+            if (!saved || !Array.isArray(saved.order)) return null;
+            const byKey = new Map(allVocabList.map(v => [itemKey(v), v]));
+            let index = Number(saved.index) || 0;
+            const list = [];
+            saved.order.forEach((k, i) => {
+                const v = byKey.get(k);
+                if (v) list.push(v);
+                else if (i < saved.index) index--;   // 前面有字被刪掉，位置往前移
+            });
+            if (list.length === 0) return null;
+            index = Math.min(Math.max(index, 0), list.length - 1);
+            return { list, index, scopes: saved.scopes || [], answerShown: !!saved.answerShown && index === saved.index };
+        }
+
+        function showResumeBox() {
+            const box = document.getElementById('resume-box');
+            const saved = loadSavedProgress();
+            if (!saved) { box.style.display = 'none'; return; }
+            document.getElementById('resume-text').innerText = `上次練習到第 ${saved.index + 1} / ${saved.list.length} 題`;
+            document.getElementById('resume-scopes').innerText = '範圍：' + saved.scopes.join('、');
+            box.style.display = 'block';
+        }
 
         async function fetchVocabData() {
             try {
@@ -155,6 +235,7 @@
                 const data = await response.text();
                 parseCSV(data);
                 buildSetupUI();
+                showResumeBox();
             } catch (error) {
                 alert('載入資料失敗，請確認 data.csv 是否存在。');
             }
@@ -189,59 +270,101 @@
 
         function buildSetupUI() {
             const container = document.getElementById('scope-checkboxes');
-            container.innerHTML = ''; 
-            
+            container.innerHTML = '';
+            // 記住上次勾選的範圍；沒有紀錄就全部勾選
+            const savedScopes = storageGet(SCOPES_KEY);
+            const remembered = Array.isArray(savedScopes) && savedScopes.some(s => uniqueScopes.includes(s));
+
             uniqueScopes.forEach(scope => {
                 const label = document.createElement('label');
                 label.className = 'checkbox-label';
-                
+
                 const cb = document.createElement('input');
                 cb.type = 'checkbox';
                 cb.value = scope;
-                cb.checked = true; 
-                
+                cb.checked = remembered ? savedScopes.includes(scope) : true;
+
                 label.appendChild(cb);
                 label.appendChild(document.createTextNode(scope));
                 container.appendChild(label);
             });
         }
 
+        function saveCheckedScopes() {
+            storageSet(SCOPES_KEY, Array.from(document.querySelectorAll('#scope-checkboxes input:checked')).map(cb => cb.value));
+        }
+        document.getElementById('scope-checkboxes').addEventListener('change', saveCheckedScopes);
+
         document.getElementById('btn-select-all').addEventListener('click', () => {
             document.querySelectorAll('#scope-checkboxes input').forEach(cb => cb.checked = true);
+            saveCheckedScopes();
         });
 
         document.getElementById('btn-deselect-all').addEventListener('click', () => {
             document.querySelectorAll('#scope-checkboxes input').forEach(cb => cb.checked = false);
+            saveCheckedScopes();
         });
+
+        function showQuiz() {
+            document.getElementById('setup-container').style.display = 'none';
+            document.getElementById('quiz-container').style.display = 'block';
+        }
 
         document.getElementById('btn-start-quiz').addEventListener('click', () => {
             const checkedScopes = Array.from(document.querySelectorAll('#scope-checkboxes input:checked')).map(cb => cb.value);
-            
+
             if (checkedScopes.length === 0) {
                 alert('請至少勾選一個考試範圍！');
                 return;
             }
 
             // 根據勾選的「考試範圍」篩選題目
-            randomizedList = allVocabList
-                .filter(v => checkedScopes.includes(v.scope))
-                .sort(() => Math.random() - 0.5);
-            
-            document.getElementById('setup-container').style.display = 'none';
-            document.getElementById('quiz-container').style.display = 'block';
-            
+            checkedScopesNow = checkedScopes;
+            randomizedList = shuffle(allVocabList.filter(v => checkedScopes.includes(v.scope)));
+
+            showQuiz();
+            storageRemove(CANVAS_KEY);
             currentIndex = 0;
             loadQuestion();
         });
 
+        // 繼續上次練習
+        document.getElementById('btn-resume').addEventListener('click', () => {
+            const saved = loadSavedProgress();
+            if (!saved) { showResumeBox(); return; }
+            randomizedList = saved.list;
+            currentIndex = saved.index;
+            checkedScopesNow = saved.scopes;
+            showQuiz();
+            loadQuestion({ restore: true });
+            if (saved.answerShown) showAnswer();
+        });
+
+        document.getElementById('btn-discard').addEventListener('click', () => {
+            clearProgress();
+            showResumeBox();
+        });
+
+        // 回到選範圍畫面：進度保留，可以按「繼續上次練習」回來
         document.getElementById('btn-back').addEventListener('click', () => {
             document.getElementById('setup-container').style.display = 'block';
             document.getElementById('quiz-container').style.display = 'none';
             clearCanvas();
             document.getElementById('answer-area').style.display = 'none';
+            showResumeBox();
         });
 
-        function loadQuestion() {
+        // 公平洗牌（Fisher–Yates）
+        function shuffle(arr) {
+            const a = arr.slice();
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        function loadQuestion(opts = {}) {
             const item = randomizedList[currentIndex];
             document.getElementById('zhuyin-display').innerText = item.zhuyin;
             document.getElementById('word-display').innerText = item.word.replaceAll(item.char, '〇');
@@ -251,18 +374,26 @@
             // 答案區顯示 範圍 + 課別，讓學生知道出處
             document.getElementById('lesson-display').innerText = `【${item.scope}】${item.lesson}`;
             document.getElementById('progress').innerText = `目前進度：${currentIndex + 1} / ${randomizedList.length}`;
-            
+
             clearCanvas();
+            if (opts.restore) restoreCanvas(itemKey(item));
+            else storageRemove(CANVAS_KEY);
+            answerShown = false;
             document.getElementById('answer-area').style.display = 'none';
             document.getElementById('btn-check').style.display = 'inline-block';
             document.getElementById('btn-next').style.display = 'none';
+            saveProgress();
         }
 
-        document.getElementById('btn-check').addEventListener('click', () => {
+        function showAnswer() {
+            answerShown = true;
             document.getElementById('answer-area').style.display = 'block';
             document.getElementById('btn-check').style.display = 'none';
             document.getElementById('btn-next').style.display = 'inline-block';
-        });
+            saveProgress();
+        }
+
+        document.getElementById('btn-check').addEventListener('click', showAnswer);
 
         document.getElementById('btn-next').addEventListener('click', () => {
             currentIndex++;
@@ -271,7 +402,7 @@
             } else {
                 alert("練習完畢！");
                 currentIndex = 0;
-                randomizedList.sort(() => Math.random() - 0.5);
+                randomizedList = shuffle(randomizedList);
                 loadQuestion();
             }
         });
@@ -285,7 +416,25 @@
         ctx.strokeStyle = '#2c3e50';
 
         function startDrawing(e) { isDrawing = true; draw(e); }
-        function stopDrawing() { isDrawing = false; ctx.beginPath(); }
+        function stopDrawing() {
+            if (isDrawing) saveCanvas();
+            isDrawing = false;
+            ctx.beginPath();
+        }
+
+        // 寫到一半的筆跡也存起來，重新整理後可以接著寫
+        function saveCanvas() {
+            const item = randomizedList[currentIndex];
+            if (!item) return;
+            storageSet(CANVAS_KEY, { key: itemKey(item), image: canvas.toDataURL('image/png') });
+        }
+        function restoreCanvas(key) {
+            const saved = storageGet(CANVAS_KEY);
+            if (!saved || saved.key !== key || !saved.image) return;
+            const img = new Image();
+            img.onload = () => ctx.drawImage(img, 0, 0);
+            img.src = saved.image;
+        }
         function draw(e) {
             if (!isDrawing) return;
             e.preventDefault();
@@ -299,10 +448,14 @@
         }
         function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath(); }
 
-        document.getElementById('btn-clear').addEventListener('click', clearCanvas);
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            clearCanvas();
+            storageRemove(CANVAS_KEY);
+        });
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseleave', stopDrawing);
         canvas.addEventListener('touchstart', startDrawing, {passive: false});
         canvas.addEventListener('touchmove', draw, {passive: false});
         canvas.addEventListener('touchend', stopDrawing);
