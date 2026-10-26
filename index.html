@@ -244,7 +244,7 @@
         function loadQuestion() {
             const item = randomizedList[currentIndex];
             document.getElementById('zhuyin-display').innerText = item.zhuyin;
-            document.getElementById('word-display').innerText = item.word.replace(item.char, '〇');
+            document.getElementById('word-display').innerText = item.word.replaceAll(item.char, '〇');
             document.getElementById('correct-char').innerText = item.char;
             document.getElementById('radical-display').innerText = item.radical;
             document.getElementById('strokes-display').innerText = item.strokes;
